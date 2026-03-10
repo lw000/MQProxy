@@ -48,11 +48,23 @@ cd D:/work/vcpkg
 # 进入项目目录
 cd D:\work\cpp_work\MQProxy
 
-# 配置CMake
+# Debug构建
 cmake -B build -DCMAKE_BUILD_TYPE=Debug
-
-# 构建项目
 cmake --build build --config Debug
+
+# Release构建
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+
+### 使用脚本
+
+```bash
+# Debug构建
+.\build.bat
+
+# Release构建
+.\build_release.bat
 ```
 
 ## 配置文件
@@ -76,6 +88,8 @@ showContent = true
     saslUsername=""
     saslPassword=""
     sslCaLocation=""
+    sslKeyLocation=""
+    sslCertificateLocation=""
     securityProtocol=""
     saslMechanism=""
     sslEndpointIdentificationAlgorithm=""
@@ -87,6 +101,8 @@ showContent = true
     saslUsername="username"
     saslPassword="password"
     sslCaLocation="path/to/ca.crt"
+    sslKeyLocation="path/to/client.key"
+    sslCertificateLocation="path/to/client.crt"
     securityProtocol="SASL_SSL"
     saslMechanism="PLAIN"
     sslEndpointIdentificationAlgorithm="none"
@@ -95,11 +111,11 @@ showContent = true
 ## 运行
 
 ```bash
-# 直接运行
-.\build\bin\MQProxy.exe
+# Debug版本
+.\build\bin\Debug\MQProxy.exe
 
-# 或指定配置文件
-.\build\bin\MQProxy.exe path\to\config.toml
+# Release版本
+.\build\bin\Release\MQProxy.exe
 ```
 
 ## 日志
@@ -112,6 +128,9 @@ showContent = true
 MQProxy/
 ├── CMakeLists.txt          # CMake构建配置
 ├── config.toml             # 配置文件
+├── build.bat               # Debug构建脚本
+├── build_release.bat       # Release构建脚本
+├── backup.bat              # 备份脚本
 ├── include/                # 头文件
 │   ├── Config.h           # 配置管理
 │   ├── Logger.h           # 日志封装
@@ -121,6 +140,8 @@ MQProxy/
 │   ├── Logger.cpp
 │   ├── KafkaConsumer.cpp
 │   └── main.cpp
+├── 3d-partys/             # 本地第三方库
+│   └── tomlplusplus/     # TOML解析库
 └── .vscode/               # VS Code配置
     ├── launch.json
     └── tasks.json
@@ -130,9 +151,26 @@ MQProxy/
 
 - 支持从config.toml加载配置
 - 支持开发/生产环境切换
-- 支持SASL认证
+- 支持SASL认证 (PLAIN, SCRAM-SHA-256, SCRAM-SHA-512)
 - 支持SSL/TLS加密
 - 使用spdlog记录日志
 - 支持多主题订阅
 - 优雅退出处理
 - 完整的错误处理
+- **断线自动重连机制**
+  - 可配置重连间隔 (reconnect.backoff.ms)
+  - 最大重连间隔 (reconnect.backoff.max.ms)
+  - Socket超时配置 (socket.timeout.ms)
+  - 元数据刷新间隔 (metadata.max.age.ms)
+  - 支持临时性错误自动恢复
+  - 网络传输错误自动重连
+
+## 备份
+
+使用 `backup.bat` 脚本备份项目（排除中间文件和日志）：
+
+```bash
+.\backup.bat
+```
+
+备份文件保存在 `d:\backup_kafka` 目录。
