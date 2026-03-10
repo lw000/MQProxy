@@ -1,0 +1,40 @@
+serviceName="OPCUAKafkaProxy"
+
+mode="consumer" # producer、consumer
+
+enableProd=false
+
+showContent = true
+
+[LOGGER]
+	level= 1 # 0=trace;1=debug;2=info;3=warn;4=error;5=critical
+	outdir="logs/OPCUAKafkaProxy-Logs"
+
+[DEV]
+brokers="127.0.0.1:9097"
+topics=["test-topic-1"]
+groupId="tester"
+saslUsername=""
+saslPassword=""
+sslCaLocation=""
+sslKeyLocation=""
+sslCertificateLocation=""
+securityProtocol="" #SASL_SSL
+saslMechanism="" #PLAIN, SCRAM-SHA-256, SCRAM-SHA-512
+sslEndpointIdentificationAlgorithm="" # none, https
+
+[PROD]
+brokers="127.0.0.1:9092"
+topics=[
+	"FTP-TEST-TOPIC-1",
+	"FTP-TEST-TOPIC-2"
+	]
+groupId="xt-iot"
+saslUsername="username"
+saslPassword="password"
+sslCaLocation="kafka-trust.crt"
+sslKeyLocation=""
+sslCertificateLocation=""
+securityProtocol="SASL_SSL" #SASL_SSL
+saslMechanism="PLAIN" #PLAIN, SCRAM-SHA-256, SCRAM-SHA-512
+sslEndpointIdentificationAlgorithm="none" # none, https
