@@ -90,9 +90,9 @@ bool KafkaConsumer::initialize(const Config& config) {
             return false;
         }
         
-        // 启用自动重连
-        if (config_->set("enable.auto.create.topics", "false", errstr) != RdKafka::Conf::CONF_OK) {
-            LOG_ERROR_FMT("Failed to set enable.auto.create.topics: {}", errstr);
+        // 禁止自动创建主题
+        if (config_->set("allow.auto.create.topics", "false", errstr) != RdKafka::Conf::CONF_OK) {
+            LOG_ERROR_FMT("Failed to set allow.auto.create.topics: {}", errstr);
             return false;
         }
         
