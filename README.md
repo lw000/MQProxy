@@ -69,40 +69,50 @@ cmake --build build --config Release
 
 ## 配置文件
 
-配置文件 `config.toml` 位于项目根目录，包含以下配置：
+项目包含两个配置文件：
+- `config.toml` - 实际运行的配置文件
+- `config.example.toml` - 配置示例文件
+
+### 配置说明
+
+配置文件位于项目根目录，包含以下配置项：
 
 ```toml
-serviceName="MQProxy"
-mode="consumer"
-enableProd=false
-showContent = true
+serviceName="OPCUAKafkaProxy"
+
+mode="consumer"              # producer 或 consumer
+enableProd=false             # 是否启用生产模式
+showContent = true           # 是否显示消息内容
 
 [LOGGER]
-    level=1  # 0=trace;1=debug;2=info;3=warn;4=error;5=critical
-    outdir="logs/MQProxy-Logs"
+    level= 1                 # 0=trace; 1=debug; 2=info; 3=warn; 4=error; 5=critical
+    outdir="logs/OPCUAKafkaProxy-Logs"
 
 [DEV]
-    brokers="localhost:9092"
-    topics=["test-topic"]
-    groupId="test-group"
-    saslUsername=""
-    saslPassword=""
-    sslCaLocation=""
-    sslKeyLocation=""
-    sslCertificateLocation=""
-    securityProtocol=""
-    saslMechanism=""
-    sslEndpointIdentificationAlgorithm=""
+    brokers="127.0.0.1:9097"
+    topics=["test-topic-1"]
+    groupId="tester"
+    saslUsername=""          # SASL用户名
+    saslPassword=""          # SASL密码
+    sslCaLocation=""         # SSL CA证书路径
+    sslKeyLocation=""        # SSL客户端密钥路径
+    sslCertificateLocation="" # SSL客户端证书路径
+    securityProtocol=""      # SASL_SSL, SSL, PLAINTEXT
+    saslMechanism=""         # PLAIN, SCRAM-SHA-256, SCRAM-SHA-512
+    sslEndpointIdentificationAlgorithm="" # none, https
 
 [PROD]
-    brokers="prod-kafka:9092"
-    topics=["prod-topic"]
-    groupId="prod-group"
+    brokers="127.0.0.1:9092"
+    topics=[
+        "FTP-TEST-TOPIC-1",
+        "FTP-TEST-TOPIC-2"
+    ]
+    groupId="xt-iot"
     saslUsername="username"
     saslPassword="password"
-    sslCaLocation="path/to/ca.crt"
-    sslKeyLocation="path/to/client.key"
-    sslCertificateLocation="path/to/client.crt"
+    sslCaLocation="kafka-trust.crt"
+    sslKeyLocation=""
+    sslCertificateLocation=""
     securityProtocol="SASL_SSL"
     saslMechanism="PLAIN"
     sslEndpointIdentificationAlgorithm="none"
@@ -127,7 +137,8 @@ showContent = true
 ```
 MQProxy/
 ├── CMakeLists.txt          # CMake构建配置
-├── config.toml             # 配置文件
+├── config.toml             # 配置文件（实际运行使用）
+├── config.example.toml     # 配置示例文件
 ├── build.bat               # Debug构建脚本
 ├── build_release.bat       # Release构建脚本
 ├── backup.bat              # 备份脚本
