@@ -5,7 +5,7 @@
 ## 依赖项
 
 本项目使用vcpkg管理依赖，需要安装以下库：
-- librdkafka
+- cppkafka (基于librdkafka的C++封装)
 - spdlog
 - nlohmann_json
 

@@ -5,12 +5,9 @@
 #include <functional>
 #include <memory>
 #include <atomic>
-
-namespace RdKafka {
-    class KafkaConsumer;
-    class Conf;
-    class TopicPartition;
-}
+#include <thread>
+#include <chrono>
+#include <cppkafka/cppkafka.h>
 
 namespace MQProxy {
 
@@ -18,9 +15,9 @@ class Config;
 
 class KafkaConsumer {
 public:
-    using MessageCallback = std::function<void(const std::string& topic, 
-                                                int partition, 
-                                                int64_t offset, 
+    using MessageCallback = std::function<void(const std::string& topic,
+                                                int partition,
+                                                int64_t offset,
                                                 const std::string& key,
                                                 const std::string& payload)>;
 
@@ -32,28 +29,25 @@ public:
     void start();
     void stop();
     bool isRunning() const { return running_; }
-    
+
     void setMessageCallback(MessageCallback callback) {
         messageCallback_ = std::move(callback);
     }
 
 private:
     void consumeLoop();
-    void handleMessages();
     void handleReconnect();
-    
-    std::unique_ptr<RdKafka::KafkaConsumer> consumer_;
-    std::unique_ptr<RdKafka::Conf> config_;
-    std::unique_ptr<RdKafka::Conf> topicConfig_;
-    
+
+    std::unique_ptr<cppkafka::Consumer> consumer_;
+    std::vector<std::string> subscribedTopics_;
+
     std::string brokers_;
     std::string groupId_;
-    
+
     std::atomic<bool> running_;
     std::atomic<bool> initialized_;
-    
+
     MessageCallback messageCallback_;
-    std::vector<std::string> subscribedTopics_;
 };
 
 } // namespace MQProxy

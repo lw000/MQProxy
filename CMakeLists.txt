@@ -20,7 +20,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # 查找依赖包
-find_package(RdKafka CONFIG REQUIRED)
+find_package(cppkafka CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
@@ -54,7 +54,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # 链接库
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    RdKafka::rdkafka
+    CppKafka::cppkafka
     spdlog::spdlog
     nlohmann_json::nlohmann_json
 )
@@ -95,6 +95,7 @@ if(WIN32)
             "tomlplusplus-3.dll"
             "spdlogd.dll"
             "libcurl-d.dll"
+            "cppkafka.dll"
         )
     else()
         set(DLL_SRC_DIR "D:/work/vcpkg/installed/x64-windows/bin")
@@ -111,6 +112,7 @@ if(WIN32)
             "tomlplusplus-3.dll"
             "spdlog.dll"
             "libcurl.dll"
+            "cppkafka.dll"
         )
     endif()
     
