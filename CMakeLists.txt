@@ -28,15 +28,12 @@ find_package(nlohmann_json CONFIG REQUIRED)
 
 # 收集源文件
 file(GLOB_RECURSE SOURCES 
-    "src/*.cpp"
     "src/*.cc"
-    "src/*.cxx"
 )
 
 # 收集头文件
 file(GLOB_RECURSE HEADERS 
-    "include/*.h"
-    "include/*.hpp"
+    "include/*.hxx"
 )
 
 # 创建可执行文件
