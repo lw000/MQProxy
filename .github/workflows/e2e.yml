@@ -1,0 +1,86 @@
+name: E2E and Analysis
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build MQProxy
+    runs-on: [self-hosted, windows, x64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build-verify -G "Visual Studio 16 2019" -A x64
+      - name: Build Debug
+        run: cmake --build build-verify --config Debug
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: mqproxy-bin
+          path: build-verify/bin/Debug/
+
+  e2e:
+    name: Playwright E2E (shard ${{ matrix.shard }}/3)
+    runs-on: [self-hosted, windows, x64]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: tests/e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install chromium
+      - name: Run E2E
+        run: npm test -- --shard=${{ matrix.shard }}/3
+      - name: Analyze results
+        if: always()
+        run: python analyze_results.py
+      - name: Propose locator healing
+        if: failure()
+        run: python heal_locators.py
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-${{ matrix.shard }}
+          path: tests/e2e/test-results/
+
+  system-validation:
+    name: Backend system validation
+    needs: build
+    runs-on: [self-hosted, windows, x64]
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: tests/kafka
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download executable
+        uses: actions/download-artifact@v4
+        with:
+          name: mqproxy-bin
+          path: build-verify/bin/Debug
+      - name: Dynamic configuration validation
+        run: python run_dynamic_validation.py
+      - name: Regression validation
+        run: python run_system_validation.py

@@ -3,11 +3,15 @@
 #
 # 原则：只忽略本地生成物、运行时产物与敏感信息。
 # 以下内容属于项目交付物 / 受管依赖，禁止加入忽略规则：
-#   - 3d-partys/            受管第三方库（csv.hpp / glob / nlohmann / tomlplusplus / catch2）
-#   - config.example.toml   配置模板（config.toml 才忽略）
-#   - docs/reports/         项目正式测试报告
-#   - changelog/            按日变更日志
-#   - tests/kafka/*.py      测试脚本；kafka-local.toml 为单机测试权威配置
+#   - 3d-partys/              受管第三方库（csv.hpp / glob / nlohmann / tomlplusplus /
+#                             catch2 / cpp-httplib / cxxopts）
+#   - config.example.toml     配置模板（config.toml 才忽略）
+#   - docs/reports/           项目正式测试报告
+#   - changelog/              按日变更日志
+#   - apps/ common/ services/ web/    重构后的源码与静态资源
+#   - .github/workflows/      CI 工作流配置（团队共享）
+#   - tests/kafka/*.py、tests/e2e/*.js|py|json   测试脚本与配置；
+#     package-lock.json、quarantine.json 为 E2E 必需文件，不可忽略
 # ============================================================================
 
 # ----------------------------------------------------------------------------
@@ -72,7 +76,18 @@ logs/
 *.log
 
 # ----------------------------------------------------------------------------
-# Python 测试缓存与虚拟环境（tests/kafka 脚本运行产生）
+# SQLite 动态配置库（首次启动由 config.toml 种子自动创建，运行期数据不入库）
+# 项目当前使用 .db；额外覆盖 sqlite/sqlite3 后缀变体，防止手工改名后漏忽略。
+# ----------------------------------------------------------------------------
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ----------------------------------------------------------------------------
+# Python 测试缓存与虚拟环境（tests/kafka、tests/e2e 脚本运行产生）
 # ----------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
@@ -86,11 +101,28 @@ venv/
 .cache/
 
 # ----------------------------------------------------------------------------
-# 测试运行时产物（Kafka 本地实例生成文件与 E2E 报告，可再生成；
+# Kafka 测试运行时产物（本地 broker 生成文件与 E2E 报告，可再生成；
 # 正式测试报告在 docs/reports/，不受此规则影响）
 # ----------------------------------------------------------------------------
 tests/kafka/generated/
 tests/kafka/reports/
+
+# ----------------------------------------------------------------------------
+# Node.js 与 Playwright E2E 产物
+# npm install / playwright test / MCP 探索与看板脚本生成，全部可再生成。
+# test-results/ 与 metrics/ 为非锚定规则，覆盖 tests/e2e/ 下的实际目录。
+# ----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+test-results/
+playwright-report/
+blob-report/
+tests/e2e/metrics/
+.playwright-mcp/
+
+# ----------------------------------------------------------------------------
+# 覆盖率与通用测试产物
+# ----------------------------------------------------------------------------
 coverage/
 .coverage
 .coverage.*

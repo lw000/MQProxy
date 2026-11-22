@@ -6,9 +6,20 @@ enableProd=false
 
 showContent = true
 
+# 启动依赖配置：进程启动必需，不随 Web 动态修改
+[SERVER]
+host="127.0.0.1"
+port=8080
+webroot="web"
+
+[DATABASE]
+path="mqproxy.db"
+
+# 首次启动时作为 SQLite 种子；运行期以库内配置为准
 [LOGGER]
-	level= 1 # 0=trace;1=debug;2=info;3=warn;4=error;5=critical
-	outdir="logs/OPCUAKafkaProxy-Logs"
+level=1 # 0=trace;1=debug;2=info;3=warn;4=error;5=critical
+flushIntervalMs=1000 # 定时刷新毫秒，0=关闭
+outdir="logs/OPCUAKafkaProxy-Logs"
 
 [DEV]
 brokers="127.0.0.1:9097"

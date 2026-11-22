@@ -6,32 +6,17 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <cppkafka/cppkafka.h>
 
+#include "common/bootstrap_config.hxx"
+
 namespace MQProxy {
 
-class Config;
-
 /**
- * @brief 重连所需的连接与安全配置快照（不依赖 Config 生命周期）。
- */
-struct ConnectionConfig {
-    std::string brokers;
-    std::string groupId;
-    std::string securityProtocol;
-    std::string saslMechanism;
-    std::string saslUsername;
-    std::string saslPassword;
-    std::string sslCaLocation;
-    std::string sslKeyLocation;
-    std::string sslCertificateLocation;
-    std::string sslEndpointIdentificationAlgorithm;
-};
-
-/**
- * @brief Kafka 消费者：独立消费线程 + 可重连，所有权由本类管理。
+ * @brief Kafka 消费者：独立消费线程 + 可重连；私有实现，仅由 KafkaManager 使用。
  */
 class KafkaConsumer {
 public:
@@ -47,7 +32,7 @@ public:
     KafkaConsumer(const KafkaConsumer&) = delete;
     KafkaConsumer& operator=(const KafkaConsumer&) = delete;
 
-    bool initialize(const Config& config);
+    bool initialize(const KafkaRuntimeConfig& cfg);
     bool subscribe(const std::vector<std::string>& topics);
     void start();
     void stop();
@@ -65,7 +50,7 @@ private:
     std::unique_ptr<cppkafka::Consumer> consumer_;
     mutable std::mutex consumerMutex_;
     std::vector<std::string> subscribedTopics_;
-    ConnectionConfig connection_;
+    KafkaRuntimeConfig config_;
 
     std::atomic<bool> running_{false};
     std::atomic<bool> initialized_{false};

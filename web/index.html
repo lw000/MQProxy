@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MQProxy 管理控制台</title>
+<style>
+    :root { color-scheme: light; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+    body { margin: 0; background: #f4f6f9; color: #1f2937; }
+    header { background: #1e3a5f; color: #fff; padding: 18px 28px; }
+    header h1 { margin: 0; font-size: 20px; }
+    header p { margin: 6px 0 0; opacity: .8; font-size: 13px; }
+    main { max-width: 1080px; margin: 24px auto; padding: 0 20px 40px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+    .card { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+    .card h2 { margin: 0 0 14px; font-size: 16px; border-left: 4px solid #2b6cb0; padding-left: 10px; }
+    label { display: block; margin: 10px 0 4px; font-size: 13px; font-weight: 600; }
+    input, select, textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd5e0;
+        border-radius: 6px; font-size: 14px; font-family: inherit; }
+    textarea { min-height: 76px; resize: vertical; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    button { border: 0; border-radius: 6px; padding: 9px 16px; font-size: 14px; cursor: pointer; color: #fff;
+        background: #2b6cb0; }
+    button:hover { filter: brightness(1.08); }
+    button.secondary { background: #4a5568; }
+    button.danger { background: #c53030; }
+    .kv { font-size: 13px; line-height: 1.9; }
+    .kv span { display: inline-block; min-width: 120px; color: #718096; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px;
+        background: #e2e8f0; color: #4a5568; }
+    .badge.on { background: #c6f6d5; color: #22543d; }
+    pre { background: #111827; color: #e2e8f0; padding: 14px; border-radius: 8px; min-height: 90px;
+        max-height: 220px; overflow: auto; font-size: 12px; white-space: pre-wrap; }
+    .hint { font-size: 12px; color: #718096; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+    <h1>MQProxy 管理控制台</h1>
+    <p>动态配置存于 SQLite；保存配置后需点击对应"重启"按钮才会生效。</p>
+</header>
+<main>
+    <div class="grid">
+        <section class="card">
+            <h2>运行状态</h2>
+            <div class="kv" id="status" data-testid="status-panel">加载中...</div>
+            <div class="row"><button data-testid="status-refresh" onclick="refreshAll()">刷新</button></div>
+        </section>
+
+        <section class="card">
+            <h2>Kafka 动态配置</h2>
+            <label> brokers </label>
+            <input id="k_brokers" data-testid="kafka-brokers" placeholder="127.0.0.1:9092">
+            <label> topics（每行一个） </label>
+            <textarea id="k_topics" data-testid="kafka-topics"></textarea>
+            <label> groupId </label>
+            <input id="k_group" data-testid="kafka-group">
+            <label> SASL / SSL 参数（可选） </label>
+            <input id="k_security" data-testid="kafka-security" placeholder="securityProtocol，如 SASL_SSL">
+            <input id="k_mechanism" data-testid="kafka-mechanism" placeholder="saslMechanism，如 PLAIN">
+            <input id="k_user" data-testid="kafka-user" placeholder="saslUsername">
+            <input id="k_pass" data-testid="kafka-pass" placeholder="saslPassword">
+            <div class="row">
+                <button data-testid="kafka-save" onclick="saveKafka()">保存配置</button>
+                <button class="secondary" data-testid="kafka-start" onclick="kafkaOp('start')">启动</button>
+                <button class="danger" data-testid="kafka-stop" onclick="kafkaOp('stop')">停止</button>
+                <button class="secondary" data-testid="kafka-restart" onclick="kafkaOp('restart')">重启生效</button>
+            </div>
+            <p class="hint">保存仅写入数据库；点击"重启生效"后重建消费者并订阅最新 topics。</p>
+        </section>
+
+        <section class="card">
+            <h2>日志动态配置</h2>
+            <label> 日志等级 </label>
+            <select id="l_level" data-testid="logger-level">
+                <option value="0">0 trace</option><option value="1">1 debug</option>
+                <option value="2">2 info</option><option value="3">3 warn</option>
+                <option value="4">4 error</option><option value="5">5 critical</option>
+            </select>
+            <label> 刷新间隔（毫秒，0=关闭定时刷新） </label>
+            <input id="l_flush" data-testid="logger-flush" type="number" min="0" max="600000" step="100">
+            <div class="row">
+                <button data-testid="logger-save" onclick="saveLogger()">保存配置</button>
+                <button class="secondary" data-testid="logger-restart" onclick="loggerRestart()">重启生效</button>
+            </div>
+            <p class="hint">重启生效会立即调整运行中的等级与定时刷新线程，无需重启进程。</p>
+        </section>
+
+        <section class="card">
+            <h2>操作结果</h2>
+            <pre id="output" data-testid="output">等待操作...</pre>
+        </section>
+    </div>
+</main>
+<script>
+function show(text) { document.getElementById('output').textContent = text; }
+
+async function api(path, options) {
+    const response = await fetch(path, options);
+    const body = await response.json();
+    show(JSON.stringify({ path: path, http: response.status, response: body }, null, 2));
+    return body;
+}
+
+function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"]/g, function(c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+}
+
+async function refreshStatus() {
+    const result = await api('/api/status');
+    if (result.code !== 0) return;
+    const k = result.data.kafka, l = result.data.logger;
+    document.getElementById('status').innerHTML =
+        '<div>Kafka：<span class="badge ' + (k.running ? 'on' : '') + '" data-testid="kafka-status">' +
+        (k.running ? '运行中' : '已停止') + '</span></div>' +
+        '<div><span>brokers</span>' + esc(k.brokers) + '</div>' +
+        '<div><span>groupId</span>' + esc(k.groupId) + '</div>' +
+        '<div><span>topics</span>' + esc(k.topics.join(', ')) + '</div>' +
+        '<div><span>日志等级</span>' + esc(l.level) + '（运行时）</div>' +
+        '<div><span>刷新间隔</span>' + esc(l.flushIntervalMs) + ' ms（运行时）</div>';
+}
+
+async function loadKafka() {
+    const result = await api('/api/kafka/config');
+    if (result.code !== 0) return;
+    const c = result.data;
+    document.getElementById('k_brokers').value = c.brokers || '';
+    document.getElementById('k_topics').value = (c.topics || []).join('\n');
+    document.getElementById('k_group').value = c.groupId || '';
+    document.getElementById('k_security').value = c.securityProtocol || '';
+    document.getElementById('k_mechanism').value = c.saslMechanism || '';
+    document.getElementById('k_user').value = c.saslUsername || '';
+    document.getElementById('k_pass').value = c.saslPassword || '';
+}
+
+async function loadLogger() {
+    const result = await api('/api/logger/config');
+    if (result.code !== 0) return;
+    document.getElementById('l_level').value = String(result.data.level);
+    document.getElementById('l_flush').value = String(result.data.flushIntervalMs);
+}
+
+function post(path, payload) {
+    return api(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {})
+    });
+}
+
+async function saveKafka() {
+    const payload = {
+        brokers: document.getElementById('k_brokers').value.trim(),
+        topics: document.getElementById('k_topics').value.split('\n').map(s => s.trim()).filter(Boolean),
+        groupId: document.getElementById('k_group').value.trim(),
+        securityProtocol: document.getElementById('k_security').value.trim(),
+        saslMechanism: document.getElementById('k_mechanism').value.trim(),
+        saslUsername: document.getElementById('k_user').value.trim(),
+        saslPassword: document.getElementById('k_pass').value.trim()
+    };
+    await post('/api/kafka/config', payload);
+    await refreshStatus();
+}
+
+async function kafkaOp(operation) {
+    await post('/api/kafka/' + operation);
+    await refreshStatus();
+}
+
+async function saveLogger() {
+    await post('/api/logger/config', {
+        level: Number(document.getElementById('l_level').value),
+        flushIntervalMs: Number(document.getElementById('l_flush').value)
+    });
+    await refreshStatus();
+}
+
+async function loggerRestart() {
+    await post('/api/logger/restart');
+    await refreshStatus();
+}
+
+async function refreshAll() {
+    await refreshStatus();
+    await loadKafka();
+    await loadLogger();
+}
+
+refreshAll();
+</script>
+</body>
+</html>

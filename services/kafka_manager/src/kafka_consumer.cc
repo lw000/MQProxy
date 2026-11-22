@@ -1,7 +1,6 @@
-#include "KafkaConsumer.hxx"
+#include "kafka_consumer.hxx"
 
-#include "Config.hxx"
-#include "Logger.hxx"
+#include "common/logger.hxx"
 
 #include <chrono>
 #include <exception>
@@ -27,8 +26,8 @@ KafkaConsumer::~KafkaConsumer() {
 
 cppkafka::Configuration KafkaConsumer::buildConfiguration() const {
     cppkafka::Configuration configObj = {
-        {"metadata.broker.list", connection_.brokers},
-        {"group.id", connection_.groupId},
+        {"metadata.broker.list", config_.brokers},
+        {"group.id", config_.groupId},
         {"enable.auto.commit", false},
         {"auto.commit.interval.ms", 5000},
         {"auto.offset.reset", "latest"},
@@ -39,52 +38,40 @@ cppkafka::Configuration KafkaConsumer::buildConfiguration() const {
         {"allow.auto.create.topics", false},
     };
 
-    if (!connection_.securityProtocol.empty()) {
-        configObj.set("security.protocol", connection_.securityProtocol);
+    if (!config_.securityProtocol.empty()) {
+        configObj.set("security.protocol", config_.securityProtocol);
     }
-    if (!connection_.saslMechanism.empty()) {
-        configObj.set("sasl.mechanism", connection_.saslMechanism);
+    if (!config_.saslMechanism.empty()) {
+        configObj.set("sasl.mechanism", config_.saslMechanism);
     }
-    if (!connection_.saslUsername.empty()) {
-        configObj.set("sasl.username", connection_.saslUsername);
+    if (!config_.saslUsername.empty()) {
+        configObj.set("sasl.username", config_.saslUsername);
     }
-    if (!connection_.saslPassword.empty()) {
-        configObj.set("sasl.password", connection_.saslPassword);
+    if (!config_.saslPassword.empty()) {
+        configObj.set("sasl.password", config_.saslPassword);
     }
-    if (!connection_.sslCaLocation.empty()) {
-        configObj.set("ssl.ca.location", connection_.sslCaLocation);
+    if (!config_.sslCaLocation.empty()) {
+        configObj.set("ssl.ca.location", config_.sslCaLocation);
     }
-    if (!connection_.sslKeyLocation.empty()) {
-        configObj.set("ssl.key.location", connection_.sslKeyLocation);
+    if (!config_.sslKeyLocation.empty()) {
+        configObj.set("ssl.key.location", config_.sslKeyLocation);
     }
-    if (!connection_.sslCertificateLocation.empty()) {
-        configObj.set("ssl.certificate.location", connection_.sslCertificateLocation);
+    if (!config_.sslCertificateLocation.empty()) {
+        configObj.set("ssl.certificate.location", config_.sslCertificateLocation);
     }
-    if (!connection_.sslEndpointIdentificationAlgorithm.empty()) {
+    if (!config_.sslEndpointIdentificationAlgorithm.empty()) {
         configObj.set("ssl.endpoint.identification.algorithm",
-                      connection_.sslEndpointIdentificationAlgorithm);
+                      config_.sslEndpointIdentificationAlgorithm);
     }
     return configObj;
 }
 
-bool KafkaConsumer::initialize(const Config& config) {
+bool KafkaConsumer::initialize(const KafkaRuntimeConfig& cfg) {
     if (initialized_.load()) {
         LOG_WARN("Kafka consumer already initialized");
         return true;
     }
-    const auto& kafkaConfig = config.getKafkaConfig();
-    connection_.brokers = kafkaConfig.brokers;
-    connection_.groupId = kafkaConfig.groupId;
-    connection_.securityProtocol = kafkaConfig.securityProtocol;
-    connection_.saslMechanism = kafkaConfig.saslMechanism;
-    connection_.saslUsername = kafkaConfig.saslUsername;
-    connection_.saslPassword = kafkaConfig.saslPassword;
-    connection_.sslCaLocation = kafkaConfig.sslCaLocation;
-    connection_.sslKeyLocation = kafkaConfig.sslKeyLocation;
-    connection_.sslCertificateLocation = kafkaConfig.sslCertificateLocation;
-    connection_.sslEndpointIdentificationAlgorithm =
-        kafkaConfig.sslEndpointIdentificationAlgorithm;
-
+    config_ = cfg;
     try {
         std::lock_guard<std::mutex> lock(consumerMutex_);
         consumer_ = std::make_unique<cppkafka::Consumer>(buildConfiguration());
@@ -99,7 +86,7 @@ bool KafkaConsumer::initialize(const Config& config) {
         });
         initialized_.store(true);
         LOG_INFO_FMT("Kafka consumer initialized, brokers: {}, groupId: {}",
-                     connection_.brokers, connection_.groupId);
+                     config_.brokers, config_.groupId);
         return true;
     }
     catch (const std::exception& error) {
