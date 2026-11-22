@@ -6,6 +6,7 @@
 
 | 时间 | 主题 | 明细 |
 | --- | --- | --- |
+| 13:52 | README 补充手动调试前启动 Kafka 的步骤 | [changelog/2026-11-22.md](changelog/2026-11-22.md) |
 | 13:41 | 按方案 A 整改 config_store 数据库访问为命名参数 | [changelog/2026-11-22.md](changelog/2026-11-22.md) |
 | 13:36 | 同步数据库访问列名规则到 AI 编程准则 | [changelog/2026-11-22.md](changelog/2026-11-22.md) |
 | 13:20 | 提交前补记第三方依赖入库 | [changelog/2026-11-22.md](changelog/2026-11-22.md) |

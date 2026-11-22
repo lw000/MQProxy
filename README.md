@@ -50,6 +50,23 @@ cmake --build build-verify --config Debug
 
 启动后访问 `http://127.0.0.1:8080/`（端口由 `[SERVER].port` 决定）。页面提供状态查看、Kafka 配置与启停重启、日志等级与刷新间隔调整。
 
+### 手动调试：先启动 Kafka 服务
+
+直接运行/管理本地 Kafka 的脚本是 `tests/kafka/kafka_service.py`，手动调试 mqproxy 前先把 Kafka 跑起来：
+
+```bat
+cd /d tests\kafka
+python kafka_service.py start      :: 启动 Zookeeper(2181) + broker(9092)
+python kafka_service.py status     :: 确认 broker 为 RUNNING
+cd /d ..\..
+.\build-verify\bin\Debug\MQProxy.exe config.toml   :: 或在 VS 中调试该 exe
+```
+
+- 脚本支持 `start` / `stop` / `status` / `restart`，配置真源为 `tests/kafka/kafka-local.toml`：Kafka 目录 `C:/tools/kafka_2.12-3.3.1`、`zookeeper` 模式、broker `127.0.0.1:9092`、topic `test-topic-1`；脚本依赖 Python `tomli` 包。
+- **brokers 必须对齐**：`config.example.toml` 的 `[DEV].brokers` 是 `127.0.0.1:9097`，而脚本监听 `9092`；调试前确认本地 `config.toml` 当前生效环境的 brokers/topic 与之匹配，否则消费者连不上。
+- 启动日志在 `tests/kafka/generated/broker.log` 与 `zookeeper.log`；调试结束执行 `python kafka_service.py stop` 停服（逆序 broker → ZK，仅终止 PID 文件记录的进程树）。
+- 需要测试消息时可执行 `python run_e2e.py --no-manage`，复用已运行服务且结束时不停服。
+
 REST API（统一响应包络 `{"code":0,"message":"ok","data":{...}}`）：
 
 | 方法 | 路径 | 说明 |
