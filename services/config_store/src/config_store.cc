@@ -57,35 +57,39 @@ void ConfigStore::on_stop() noexcept {
 
 void ConfigStore::seedIfEmpty() {
     const LoggerRuntimeConfig loggerSeed = bootstrap_.getLoggerSeed();
-    SQLite::Statement loggerCount(*db_, "SELECT COUNT(*) FROM logger_config");
-    if (loggerCount.executeStep() && loggerCount.getColumn(0).getInt() == 0) {
+    SQLite::Statement loggerCount(*db_, "SELECT COUNT(*) AS row_count FROM logger_config");
+    if (loggerCount.executeStep() && loggerCount.getColumn("row_count").getInt() == 0) {
         SQLite::Statement insert(*db_,
-            "INSERT INTO logger_config(id, level, flush_interval_ms) VALUES(1, ?, ?)");
-        insert.bind(1, loggerSeed.level);
-        insert.bind(2, loggerSeed.flushIntervalMs);
+            "INSERT INTO logger_config(id, level, flush_interval_ms) "
+            "VALUES(1, :level, :flush_interval_ms)");
+        insert.bind(":level", loggerSeed.level);
+        insert.bind(":flush_interval_ms", loggerSeed.flushIntervalMs);
         insert.exec();
     }
 
-    SQLite::Statement kafkaCount(*db_, "SELECT COUNT(*) FROM kafka_config");
-    if (kafkaCount.executeStep() && kafkaCount.getColumn(0).getInt() == 0) {
+    SQLite::Statement kafkaCount(*db_, "SELECT COUNT(*) AS row_count FROM kafka_config");
+    if (kafkaCount.executeStep() && kafkaCount.getColumn("row_count").getInt() == 0) {
         const KafkaRuntimeConfig kafkaSeed = bootstrap_.getKafkaSeed();
         const nlohmann::json topics = kafkaSeed.topics;
         SQLite::Statement insert(*db_,
             "INSERT INTO kafka_config(id, brokers, topics, group_id, sasl_username, sasl_password, "
             "ssl_ca_location, ssl_key_location, ssl_certificate_location, security_protocol, "
             "sasl_mechanism, ssl_endpoint_identification_algorithm) "
-            "VALUES(1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        insert.bind(1, kafkaSeed.brokers);
-        insert.bind(2, topics.dump());
-        insert.bind(3, kafkaSeed.groupId);
-        insert.bind(4, kafkaSeed.saslUsername);
-        insert.bind(5, kafkaSeed.saslPassword);
-        insert.bind(6, kafkaSeed.sslCaLocation);
-        insert.bind(7, kafkaSeed.sslKeyLocation);
-        insert.bind(8, kafkaSeed.sslCertificateLocation);
-        insert.bind(9, kafkaSeed.securityProtocol);
-        insert.bind(10, kafkaSeed.saslMechanism);
-        insert.bind(11, kafkaSeed.sslEndpointIdentificationAlgorithm);
+            "VALUES(1, :brokers, :topics, :group_id, :sasl_username, :sasl_password, "
+            ":ssl_ca_location, :ssl_key_location, :ssl_certificate_location, :security_protocol, "
+            ":sasl_mechanism, :ssl_endpoint_identification_algorithm)");
+        insert.bind(":brokers", kafkaSeed.brokers);
+        insert.bind(":topics", topics.dump());
+        insert.bind(":group_id", kafkaSeed.groupId);
+        insert.bind(":sasl_username", kafkaSeed.saslUsername);
+        insert.bind(":sasl_password", kafkaSeed.saslPassword);
+        insert.bind(":ssl_ca_location", kafkaSeed.sslCaLocation);
+        insert.bind(":ssl_key_location", kafkaSeed.sslKeyLocation);
+        insert.bind(":ssl_certificate_location", kafkaSeed.sslCertificateLocation);
+        insert.bind(":security_protocol", kafkaSeed.securityProtocol);
+        insert.bind(":sasl_mechanism", kafkaSeed.saslMechanism);
+        insert.bind(":ssl_endpoint_identification_algorithm",
+                    kafkaSeed.sslEndpointIdentificationAlgorithm);
         insert.exec();
     }
 }
@@ -101,8 +105,8 @@ bool ConfigStore::getLoggerConfig(LoggerRuntimeConfig& out) const {
         if (!query.executeStep()) {
             return false;
         }
-        out.level = query.getColumn(0).getInt();
-        out.flushIntervalMs = query.getColumn(1).getInt();
+        out.level = query.getColumn("level").getInt();
+        out.flushIntervalMs = query.getColumn("flush_interval_ms").getInt();
         return true;
     }
     catch (const std::exception& error) {
@@ -118,10 +122,10 @@ bool ConfigStore::setLoggerConfig(const LoggerRuntimeConfig& cfg) {
             return false;
         }
         SQLite::Statement update(*db_,
-            "UPDATE logger_config SET level = ?, flush_interval_ms = ?, "
+            "UPDATE logger_config SET level = :level, flush_interval_ms = :flush_interval_ms, "
             "updated_at = CURRENT_TIMESTAMP WHERE id = 1");
-        update.bind(1, cfg.level);
-        update.bind(2, cfg.flushIntervalMs);
+        update.bind(":level", cfg.level);
+        update.bind(":flush_interval_ms", cfg.flushIntervalMs);
         update.exec();
         return true;
     }
@@ -144,18 +148,20 @@ bool ConfigStore::getKafkaConfig(KafkaRuntimeConfig& out) const {
         if (!query.executeStep()) {
             return false;
         }
-        out.brokers = query.getColumn(0).getText();
-        out.groupId = query.getColumn(2).getText();
-        out.saslUsername = query.getColumn(3).getText();
-        out.saslPassword = query.getColumn(4).getText();
-        out.sslCaLocation = query.getColumn(5).getText();
-        out.sslKeyLocation = query.getColumn(6).getText();
-        out.sslCertificateLocation = query.getColumn(7).getText();
-        out.securityProtocol = query.getColumn(8).getText();
-        out.saslMechanism = query.getColumn(9).getText();
-        out.sslEndpointIdentificationAlgorithm = query.getColumn(10).getText();
+        out.brokers = query.getColumn("brokers").getText();
+        out.groupId = query.getColumn("group_id").getText();
+        out.saslUsername = query.getColumn("sasl_username").getText();
+        out.saslPassword = query.getColumn("sasl_password").getText();
+        out.sslCaLocation = query.getColumn("ssl_ca_location").getText();
+        out.sslKeyLocation = query.getColumn("ssl_key_location").getText();
+        out.sslCertificateLocation = query.getColumn("ssl_certificate_location").getText();
+        out.securityProtocol = query.getColumn("security_protocol").getText();
+        out.saslMechanism = query.getColumn("sasl_mechanism").getText();
+        out.sslEndpointIdentificationAlgorithm =
+            query.getColumn("ssl_endpoint_identification_algorithm").getText();
 
-        const auto parsed = nlohmann::json::parse(query.getColumn(1).getText(), nullptr, false);
+        const auto parsed = nlohmann::json::parse(
+            query.getColumn("topics").getText(), nullptr, false);
         if (parsed.is_discarded() || !parsed.is_array()) {
             return false;
         }
@@ -176,22 +182,26 @@ bool ConfigStore::setKafkaConfig(const KafkaRuntimeConfig& cfg) {
             return false;
         }
         SQLite::Statement update(*db_,
-            "UPDATE kafka_config SET brokers = ?, topics = ?, group_id = ?, sasl_username = ?, "
-            "sasl_password = ?, ssl_ca_location = ?, ssl_key_location = ?, "
-            "ssl_certificate_location = ?, security_protocol = ?, sasl_mechanism = ?, "
-            "ssl_endpoint_identification_algorithm = ?, updated_at = CURRENT_TIMESTAMP "
-            "WHERE id = 1");
-        update.bind(1, cfg.brokers);
-        update.bind(2, topics.dump());
-        update.bind(3, cfg.groupId);
-        update.bind(4, cfg.saslUsername);
-        update.bind(5, cfg.saslPassword);
-        update.bind(6, cfg.sslCaLocation);
-        update.bind(7, cfg.sslKeyLocation);
-        update.bind(8, cfg.sslCertificateLocation);
-        update.bind(9, cfg.securityProtocol);
-        update.bind(10, cfg.saslMechanism);
-        update.bind(11, cfg.sslEndpointIdentificationAlgorithm);
+            "UPDATE kafka_config SET brokers = :brokers, topics = :topics, "
+            "group_id = :group_id, sasl_username = :sasl_username, "
+            "sasl_password = :sasl_password, ssl_ca_location = :ssl_ca_location, "
+            "ssl_key_location = :ssl_key_location, "
+            "ssl_certificate_location = :ssl_certificate_location, "
+            "security_protocol = :security_protocol, sasl_mechanism = :sasl_mechanism, "
+            "ssl_endpoint_identification_algorithm = :ssl_endpoint_identification_algorithm, "
+            "updated_at = CURRENT_TIMESTAMP WHERE id = 1");
+        update.bind(":brokers", cfg.brokers);
+        update.bind(":topics", topics.dump());
+        update.bind(":group_id", cfg.groupId);
+        update.bind(":sasl_username", cfg.saslUsername);
+        update.bind(":sasl_password", cfg.saslPassword);
+        update.bind(":ssl_ca_location", cfg.sslCaLocation);
+        update.bind(":ssl_key_location", cfg.sslKeyLocation);
+        update.bind(":ssl_certificate_location", cfg.sslCertificateLocation);
+        update.bind(":security_protocol", cfg.securityProtocol);
+        update.bind(":sasl_mechanism", cfg.saslMechanism);
+        update.bind(":ssl_endpoint_identification_algorithm",
+                    cfg.sslEndpointIdentificationAlgorithm);
         update.exec();
         return true;
     }
