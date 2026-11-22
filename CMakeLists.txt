@@ -1,14 +1,22 @@
 cmake_minimum_required(VERSION 3.15)
+
+# vcpkg 的 Boost wrapper 使用旧 FindBoost 模块，CMake 4.x 需显式关闭该策略告警
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD)
+endif()
+
+# vcpkg 工具链必须在 project() 之前设置，否则不生效
+if(NOT DEFINED VCPKG_ROOT OR "${VCPKG_ROOT}" STREQUAL "")
+    set(VCPKG_ROOT "C:/vcpkg" CACHE PATH "vcpkg 安装根目录")
+endif()
+set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
+
 project(MQProxy VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 设置vcpkg工具链
-set(CMAKE_TOOLCHAIN_FILE "D:/work/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-
-# 设置vcpkg installed目录
-set(VCPKG_INSTALLED_DIR "D:/work/vcpkg/installed/x64-windows")
+set(VCPKG_INSTALLED_DIR "${VCPKG_ROOT}/installed/x64-windows")
 
 # 设置CMAKE_PREFIX_PATH帮助CMake找到包
 set(CMAKE_PREFIX_PATH "${VCPKG_INSTALLED_DIR};${CMAKE_PREFIX_PATH}")
@@ -64,12 +72,16 @@ if(WIN32)
         WIN32_LEAN_AND_MEAN
     )
     
-    # 复制配置文件到输出目录
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_CURRENT_SOURCE_DIR}/config.toml
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/config.toml
-    )
+    # 复制配置文件到输出目录（config.toml 由用户从 config.example.toml 创建）
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config.toml")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_CURRENT_SOURCE_DIR}/config.toml
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/config.toml
+        )
+    else()
+        message(STATUS "config.toml not found; copy config.example.toml to config.toml to enable auto-copy")
+    endif()
     
     # 根据构建类型设置DLL源目录
     # Debug模式: vcpkg/debug/bin

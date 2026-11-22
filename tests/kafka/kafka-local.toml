@@ -1,0 +1,41 @@
+# 单机 Kafka 测试服务权威配置（唯一修改入口）
+# 修改本文件即可调整 broker/topic/consumer/测试参数，无需改动任何脚本或代码。
+
+[kafka]
+home = "C:/tools/kafka_2.12-3.3.1"   # Kafka 安装根目录，须包含 bin/windows
+mode = "zookeeper"                   # zookeeper | kraft
+
+[server]
+broker_host = "127.0.0.1"            # 监听与广播地址
+broker_port = 9092                   # 1024-65535，且与 zk/controller 端口互异
+broker_id = 0                        # >= 0，单机固定 0
+log_dir = "C:/tools/kafka-data/kafka-logs"          # 不得位于 Kafka 安装目录内
+num_partitions = 1                   # 1-1000，新 topic 默认分区数
+default_replication_factor = 1       # 单机必须为 1
+offsets_topic_replication_factor = 1 # 单机必须为 1
+log_retention_hours = 168            # > 0
+
+[zookeeper]
+host = "127.0.0.1"
+port = 2181                          # 1024-65535，且与 broker 端口互异
+data_dir = "C:/tools/kafka-data/zookeeper"
+
+[kraft]
+controller_port = 9093               # 仅 kraft 模式使用，须与其他端口互异
+node_id = 1                          # >= 0
+cluster_id = ""                      # 留空则首次启动自动生成并持久化到 generated/cluster_id.txt
+
+[topic]
+name = "test-topic-1"                # 匹配 [A-Za-z0-9._-]+
+partitions = 1                       # 1-1000
+replication_factor = 1               # 单机必须为 1
+
+[consumer]
+group_id = "tester"                  # 非空
+auto_offset_reset = "earliest"       # earliest | latest | none
+
+[test]
+message_count = 10                   # 1-10000
+payload_prefix = "mqproxy-e2e-"
+produce_timeout_ms = 10000           # > 0
+consume_timeout_ms = 30000           # > 0

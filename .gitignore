@@ -1,11 +1,109 @@
-# Build directories
+# ============================================================================
+# MQProxy Git 忽略规则
+#
+# 原则：只忽略本地生成物、运行时产物与敏感信息。
+# 以下内容属于项目交付物 / 受管依赖，禁止加入忽略规则：
+#   - 3d-partys/            受管第三方库（csv.hpp / glob / nlohmann / tomlplusplus / catch2）
+#   - config.example.toml   配置模板（config.toml 才忽略）
+#   - docs/reports/         项目正式测试报告
+#   - changelog/            按日变更日志
+#   - tests/kafka/*.py      测试脚本；kafka-local.toml 为单机测试权威配置
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 构建输出目录（CMake / Visual Studio 生成，可随时重建）
+# ----------------------------------------------------------------------------
 build/
+build-verify/
+cmake-build-*/
 bin/
 lib/
 out/
+Debug/
+Release/
+x64/
+Win32/
+CMakeFiles/
+_deps
 
-# Visual Studio
+# CMake 本地缓存与用户定制配置（CMakePresets.json 属团队共享，不忽略）
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+CMakeUserPresets.json
+CMakeSettings.json
+
+# 编译中间产物与二进制（正常位于 build*/ 下，此处防止手工散落到源码根目录）
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.exp
+*.tlog
+*.recipe
+*.lastbuildstate
+*.exe
+*.dll
+*.lib
+
+# ----------------------------------------------------------------------------
+# 本地运行配置与敏感信息（含 SASL 密码 / SSL 私钥，严禁入库）
+# config.example.toml 是模板，必须保留；*.pem / *.key / *.crt 等为凭据与证书。
+# ----------------------------------------------------------------------------
+config.toml
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.pfx
+*.p12
+*.jks
+*.keystore
+
+# ----------------------------------------------------------------------------
+# 运行时日志（日志目录由配置 outdir 指定，文件名按天生成）
+# ----------------------------------------------------------------------------
+logs/
+*.log
+
+# ----------------------------------------------------------------------------
+# Python 测试缓存与虚拟环境（tests/kafka 脚本运行产生）
+# ----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+venv/
+.cache/
+
+# ----------------------------------------------------------------------------
+# 测试运行时产物（Kafka 本地实例生成文件与 E2E 报告，可再生成；
+# 正式测试报告在 docs/reports/，不受此规则影响）
+# ----------------------------------------------------------------------------
+tests/kafka/generated/
+tests/kafka/reports/
+coverage/
+.coverage
+.coverage.*
+htmlcov/
+*.trx
+TestResults/
+
+# ----------------------------------------------------------------------------
+# 编辑器与 IDE 本地状态（版本相关的用户文件，非团队共享配置）
+# ----------------------------------------------------------------------------
 .vs/
+.vscode/
+.idea/
 *.suo
 *.user
 *.userosscache
@@ -13,34 +111,29 @@ out/
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
-
-# CMake
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps
-
-# IDE
-.vscode/
-.idea/
+*.iml
+.history/
 *.swp
 *.swo
+*.swn
 *~
+*.orig
+*.rej
+*.sublime-workspace
 
-# Log files
-logs/
-*.log
-
-# OS files
+# ----------------------------------------------------------------------------
+# 操作系统文件与临时/备份文件（跨平台通用）
+# ----------------------------------------------------------------------------
 .DS_Store
+._*
+.Spotlight-V100/
+.Trashes/
 Thumbs.db
+ehthumbs.db
 Desktop.ini
-
-# Backup files
+$RECYCLE.BIN/
+*.tmp
+*.temp
 *.bak
-*~
-configtoml
-config.toml
+*.backup
+*.old
